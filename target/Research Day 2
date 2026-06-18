@@ -1,0 +1,59 @@
+# RESEARCH DAY 02
+
+### Q1. What does CRUD stand for?
+**CRUD** is an acronym that describes the four basic operations you can perform on any data repository or database:
+* **C**reate: Adding new records (e.g., saving a brand new category like "Desserts").
+* **R**ead: Fetching or viewing existing records (e.g., listing all categories on a menu screen).
+* **U**pdate: Modifying an existing record (e.g., changing a category name from "Burgers" to "Gourmet Burgers").
+* **D**elete: Removing a record permanently from the database
+
+---
+
+### Q2. Difference between HTTP methods POST, PUT, PATCH, DELETE?
+These are verbs used to tell the server what action to perform on a resource:
+* **POST:** Used to **create** a brand new resource. It is not "idempotent," meaning if you send the same POST request 3 times, you will accidentally create 3 separate duplicate records.
+* **PUT:** Used to **replace or completely overwrite** an existing resource. If the resource doesn't exist, it can sometimes create it. You must send the full updated data object.
+* **PATCH:** Used to perform a **partial update**. Instead of replacing everything, you only send the specific field you want to change (e.g., just updating a single text field without resending the rest of the object).
+* **DELETE:** Used to **remove** a resource completely from the server by its unique identifier.
+
+---
+
+### Q3. Give the correct HTTP status code for each:
+* **a. A new category was created:** `201 Created`
+* **b. A category was deleted successfully:** `200 OK` (or `204 No Content`)
+* **c. The id requested does not exist:** `404 Not Found`
+* **d. The request body is missing a required field:** `400 Bad Request`
+* **e. The user is logged in but not allowed:** `403 Forbidden` *(Note: 401 Unauthorized is when you aren't logged in at all, while 403 means you are logged in but lack admin permissions).*
+
+---
+
+### Q4. Difference between @RequestBody, @RequestParam, @PathVariable
+These annotations tell Spring Boot where to extract incoming user data from the network request:
+
+* **`@RequestBody`:** Extracts data hidden inside the main **payload/body** of the incoming HTTP request. Usually used for structured JSON objects during creations or updates.
+    * *Example:* Sending a complete category object `{"name": "Drinks"}` to `POST /api/categories`.
+* **`@PathVariable`:** Extracts a variable directly embedded inside the **URL path** itself. Used to pinpoint a specific resource by its ID.
+    * *Example:* Finding category #5 via `GET /api/categories/5`.
+* **`@RequestParam`:** Extracts data from the **query parameters** attached to the end of a URL string after a question mark `?`. Used mostly for filtering, sorting, or pagination.
+    * *Example:* Searching for a category by name via `GET /api/categories?search=FastFood`.
+
+---
+
+### Q5. What is Jakarta Bean Validation? Explain @Valid, @NotBlank, @Size.
+**Jakarta Bean Validation** is a standard Java specification that lets you add validation rules directly to your data fields using simple annotations, preventing bad or broken data from entering your system.
+* **`@Valid`:** Placed in the Controller method to tell Spring Boot: *"Hey, check this incoming data object against its validation rules before letting the method run."*
+* **`@NotBlank`:** Ensures that a text field is not null, not empty, and contains at least one non-whitespace character (preventing a user from creating a category named `"   "`).
+* **`@Size`:** Restricts a field's character length within a specific minimum and maximum range (e.g., `@Size(min = 3, max = 50)` forces a name to be a reasonable size).
+
+---
+
+### Q6. Why return a DTO and not the entity itself?
+A **DTO (Data Transfer Object)** should always be returned instead of a database **Entity** for two primary reasons:
+1.  **Security & Privacy:** Database entities often mirror the entire table structure, including sensitive internal information, hidden system passwords, or auto-generated system fields. DTOs act as a protective filter, exposing only the specific data fields the user actually needs to see.
+2.  **Decoupling & Flexibility:** It decouples your external API design from your internal database design. If you decide to rename a column in your database table tomorrow, you can easily change the entity mapping without breaking the front-end API format that users rely on.
+
+---
+
+### Q7. What is Optional<T>? Why does findById return Optional?
+* **What it is:** `Optional<T>` is a container object introduced in Java 8 that may or may not contain a non-null value. Think of it as a safety wrapper box that is either full or empty.
+* **Why findById uses it:** When you look up an item in a database by its ID, there is a realistic chance that the ID doesn't exist (e.g., searching for category #999 when you only have 3 items). Instead of returning a dangerous `null` value—which crashes your app with a `NullPointerException`—Spring Data JPA returns an empty `Optional`. This cleanly forces you as a developer to handle the missing case safely using methods like `.orElseThrow()`.
