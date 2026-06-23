@@ -2,6 +2,7 @@ package com.jumpstart.food_ordering_system.service;
 
 import com.jumpstart.food_ordering_system.dto.CategoryDto;
 import com.jumpstart.food_ordering_system.entity.Category;
+import com.jumpstart.food_ordering_system.exception.CategoryNotFoundException;
 import com.jumpstart.food_ordering_system.repository.CategoryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -11,14 +12,13 @@ import java.util.stream.Collectors;
 
 /**
  * WHAT THE SERVICE LAYER DOES:
- * 1. Business Logic Business Center: It coordinates and executes the application's core business processes.
- * 2. Component Decoupling: It isolates the heavy data-access mechanisms (Repository) from the API web layout (Controller).
- * 3. Data Transformation Layer: It handles the secure conversion of persistence database models (Entities) into lightweight objects (DTOs).
+ * 1. Business Logic Business Center
+ * 2. Component Decoupling
+ * 3. Data Transformation Layer
  */
 @Service
 public class CategoryServiceImpl implements CategoryService {
 
-    // RESPONSIBILITY 1: Inject CategoryRepository
     private final CategoryRepository categoryRepository;
 
     @Autowired
@@ -28,12 +28,59 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public List<CategoryDto> getAllCategories() {
-        // RESPONSIBILITY 2: Retrieve categories from the database
-        List<Category> categories = categoryRepository.findAll();
-
-        // RESPONSIBILITY 3 & 4: Convert Category entities into CategoryDto objects and return the list
-        return categories.stream()
-                .map(category -> new CategoryDto(category.getId(), category.getName()))
+        return categoryRepository.findAll().stream()
+                .map(this::mapToDto)
                 .collect(Collectors.toList());
+    }
+
+    // Task 4.1: Implement getCategoryById
+    @Override
+    public CategoryDto getCategoryById(Long id) {
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new CategoryNotFoundException("Category not found with id: " + id));
+        return mapToDto(category);
+    }
+
+    // Task 4.2: Implement addCategory
+    @Override
+    public CategoryDto addCategory(CategoryDto dto) {
+        Category category = mapToEntity(dto);
+        Category savedCategory = categoryRepository.save(category);
+        return mapToDto(savedCategory);
+    }
+
+    // Task 4.4: Implement updateCategory
+    @Override
+    public CategoryDto updateCategory(Long id, CategoryDto dto) {
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new CategoryNotFoundException("Category not found with id: " + id));
+
+        category.setName(dto.getName());
+        Category updatedCategory = categoryRepository.save(category);
+        return mapToDto(updatedCategory);
+    }
+
+    // Task 4.5: Implement deleteCategory
+    @Override
+    public void deleteCategory(Long id) {
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new CategoryNotFoundException("Category not found with id: " + id));
+        categoryRepository.delete(category);
+    }
+
+    // Helper method: Map Entity to DTO
+    private CategoryDto mapToDto(Category category) {
+        CategoryDto dto = new CategoryDto();
+        dto.setId(category.getId());
+        dto.setName(category.getName());
+        return dto;
+    }
+
+    // Helper method: Map DTO to Entity
+    private Category mapToEntity(CategoryDto dto) {
+        Category category = new Category();
+        category.setId(dto.getId());
+        category.setName(dto.getName());
+        return category;
     }
 }
