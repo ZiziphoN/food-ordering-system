@@ -1,0 +1,90 @@
+# RESEARCH - DAY 03
+
+### Q1. What is JPA? What is Hibernate? How are they related?
+* **JPA (Jakarta Persistence API):** A specification (a set of rules, interfaces, and guidelines) for managing relational data in Java applications. It defines how object-relational mapping should work, but contains no actual operational code.
+* **Hibernate:** An implementation of the JPA specification. It is the actual framework that contains the code to talk to the database, generate SQL, and map objects.
+* **Relationship:** Think of JPA as an interface and Hibernate as the implementing class. You write code using JPA annotations (`@Entity`, `@Id`), and Hibernate works under the hood to execute it.
+
+---
+
+### Q2. What is the difference between @Entity and @Table?
+* **@Entity:** A JPA annotation that tells the persistence provider (Hibernate) that this Java class is a lightweight domain object that should be mapped to a database table. It is mandatory for database mapping.
+* **@Table:** An optional annotation used to specify the exact details of the table in the database (like `name`, `schema`, or unique constraints). If you omit it, Hibernate automatically names the table after the class name.
+
+---
+
+### Q3. What is a foreign key? What is @ManyToOne? Give 2 real-world examples.
+* **Foreign Key (FK):** A column (or group of columns) in one table that uniquely identifies a row of another table, establishing a link between the two.
+* **@ManyToOne:** A JPA annotation indicating that multiple instances of the current entity can be associated with a single instance of another entity.
+* **Real-world Examples:**
+  1. **E-commerce:** Many `Product` entities belong to one `Category` (e.g., iPhone 15 and Galaxy S24 both point to the "Electronics" category).
+  2. **Restaurant Menu:** Many `MenuItem` entities (e.g., Burger, Fries) belong to one `MenuSection` (e.g., "Main Course").
+
+---
+
+### Q4. What does @JoinColumn(name = "category_id") do?
+It explicitly defines the **foreign key column name** in the current entity's database table that will hold the relationship ID. In this case, the table for the current entity will have a column named `category_id` which points to the primary key of the target entity.
+
+---
+
+### Q5. Why store price as BigDecimal and not double?
+* **double and float** are floating-point types designed for scientific calculations. They use binary scientific notation, which can cause subtle rounding errors (e.g., 0.1 + 0.2 = 0.30000000000000004).
+* **BigDecimal** provides exact precision and complete control over rounding behavior, making it mandatory for financial data, currency, and prices.
+
+---
+
+### Q6. What does FetchType LAZY vs EAGER mean? What is the default for @ManyToOne?
+* **FetchType.LAZY:** The associated entity is not loaded from the database until you explicitly call its getter method (e.g., `menuItem.getCategory()`). It uses a proxy object initially to save memory and performance.
+* **FetchType.EAGER:** The associated entity is fetched immediately at the same time the parent entity is loaded, usually via a database `JOIN`.
+* **Default for @ManyToOne:** It defaults to `FetchType.EAGER` (which is often a performance trap, so switching it to `LAZY` is highly recommended).
+
+---
+
+### Q7. What is the N+1 query problem?
+The N+1 query problem occurs when an application executes 1 initial query to fetch a list of N parent records, and then executes N subsequent queries to fetch the associated child data for each individual parent.
+
+> **Example:** You fetch 100 `MenuItem` records (1 query). If you then loop through them and call `.getCategory().getName()` on an un-fetched lazy relationship, Hibernate will fire 100 individual queries to look up each category. Total queries = 1 + 100 = 101.
+
+---
+
+### Q8. What is dependency injection? Constructor injection vs field injection — which is preferred and why?
+* **Dependency Injection (DI):** A design pattern where an object's dependencies are supplied (injected) by an external framework (Spring) rather than created by the object itself using `new`.
+* **Field Injection:** Using `@Autowired` directly on the class fields.
+* **Constructor Injection:** Passing dependencies through the class constructor.
+* **Preferred Method:** **Constructor injection** is strongly preferred because:
+  * It allows fields to be marked `final` (ensuring immutability).
+  * It makes unit testing easier without needing a Spring Context (you can just pass mocks via the constructor).
+  * It prevents partial/invalid object creation.
+
+---
+
+### Q9. What does @RequiredArgsConstructor (Lombok) do?
+It automatically generates a constructor at compile-time for all fields marked as `final` (or `@NonNull`). Combined with Spring, this completely eliminates the boilerplate code needed for **constructor injection**.
+
+---
+
+### Q10. What is the role of the SERVICE layer? Why must it be separate from the controller?
+* **Role:** The service layer coordinates and executes the core business logic of your application. It acts as the bridge between the API Controllers and the Repositories.
+* **Why separate?** * **Separation of Concerns:** The controller should only handle HTTP requests, routing, validation, and responses.
+  * **Reusability & Maintainability:** Business logic placed in a service can be reused across different controllers, scheduled tasks, or event listeners without duplicating code.
+  * **Transaction Management:** Database transactions (`@Transactional`) are typically managed at the service boundary.
+
+---
+
+### Q11. Why MUST you validate that categoryId exists before saving a menu?
+If you attempt to save a menu item with a `categoryId` that does not exist in the database:
+1. The database will throw a **Foreign Key Constraint Violation** error, which crashes the database transaction.
+2. Validating it explicitly in your Java service layer allows you to catch the missing ID early and return a clean, user-friendly, and predictable error response (like a `404 Not Found` or `400 Bad Request`) instead of a messy `500 Internal Server Error`.
+
+---
+
+### Q12. Difference between save() and saveAndFlush()?
+* **save():** Saves the entity to the Hibernate persistence context. Hibernate waits and chooses the optimal time to write the changes to the database (usually at the very end of the transaction).
+* **saveAndFlush():** Saves the entity and **immediately forces** Hibernate to push (flush) the changes to the database right then and there. It does not commit the transaction, but changes are made visible to other queries within the same transaction.
+
+---
+
+### Q13. Why write private mapper methods (entity <-> dto)?
+* **Decoupling:** Prevents internal database schemas (Entities) from leaking to the outside world/API client (DTOs).
+* **Security:** Avoids exposing internal IDs, password hashes, or audit fields (`createdAt`, `updatedAt`) that clients don't need to see or modify.
+* **Cleanliness:** Keeps mapping logic isolated, highly testable, and out of your core business logic methods.
